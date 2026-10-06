@@ -3,14 +3,17 @@ function fn() {
 
     karate.log('Ambiente de execução:', env);
 
+    var defaultBaseUrl = 'https://restful-booker.herokuapp.com';
+
+    var baseUrl =
+        karate.properties['baseUrl'] ||
+        java.lang.System.getenv('BASE_URL') ||
+        defaultBaseUrl;
+
     var config = {
         env: env,
-        baseUrl: 'https://restful-booker.herokuapp.com'
+        baseUrl: baseUrl
     };
-
-    if (env == 'dev') {
-        config.baseUrl = 'https://restful-booker.herokuapp.com';
-    }
 
     karate.configure('connectTimeout', 10000);
     karate.configure('readTimeout', 10000);
