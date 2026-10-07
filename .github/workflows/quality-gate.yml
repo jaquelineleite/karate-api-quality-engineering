@@ -8,8 +8,8 @@ on:
 
 jobs:
 
-  api-tests:
-    name: Karate API Tests
+  regression-tests:
+    name: Karate Regression Gate
     runs-on: ubuntu-latest
 
     steps:
@@ -23,18 +23,45 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Executar testes Karate
+      - name: Executar regressão Karate
+        run: mvn test -Dtest=RegressionRunner
+
+      - name: Publicar relatório Karate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: karate-regression-report
+          path: target/karate-reports/
+
+  full-api-tests:
+    name: Karate Full API Suite
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Executar suíte completa Karate
         run: mvn clean test
 
       - name: Publicar relatório Karate
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: karate-report
+          name: karate-full-report
           path: target/karate-reports/
 
   performance-smoke:
     name: k6 Performance Smoke
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:

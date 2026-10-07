@@ -3,11 +3,12 @@ Feature: Obter token de autenticação
   Scenario: Gerar token para operações protegidas
     Given url baseUrl
     And path 'auth'
+    And header Content-Type = 'application/json'
     And request
       """
       {
-        "username": "admin",
-        "password": "password123"
+        "username": "#(authUsername)",
+        "password": "#(authPassword)"
       }
       """
     When method post

@@ -1,0 +1,11 @@
+{
+  "firstname": "Usuario",
+  "lastname": "QA",
+  "totalprice": 500,
+  "depositpaid": true,
+  "bookingdates": {
+    "checkin": "2026-12-10",
+    "checkout": "2026-12-15"
+  },
+  "additionalneeds": "Quality Engineering"
+}
