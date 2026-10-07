@@ -76,3 +76,56 @@ jobs:
 
       - name: Executar smoke de performance
         run: k6 run performance/k6/smoke.js
+
+  microservices-integration:
+    name: Microservices Integration Gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build Booking Service
+        run: mvn -f microservices/booking-service/pom.xml clean package -DskipTests
+
+      - name: Build Payment Service
+        run: mvn -f microservices/payment-service/pom.xml clean package -DskipTests
+
+      - name: Subir ambiente de microsserviços
+        run: docker compose -f infrastructure/docker-compose.yml up -d --build
+
+      - name: Aguardar Booking Service
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8081/actuator/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Executar testes de integração
+        run: mvn test -Dtest=MicroservicesRunner
+
+      - name: Publicar relatório de integração
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: karate-microservices-report
+          path: target/karate-reports/
+
+      - name: Exibir logs dos microsserviços em caso de falha
+        if: failure()
+        run: docker compose -f infrastructure/docker-compose.yml logs
+
+      - name: Encerrar ambiente
+        if: always()
+        run: docker compose -f infrastructure/docker-compose.yml down -v

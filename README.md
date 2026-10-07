@@ -197,6 +197,34 @@ Testes agressivos de stress, spike ou endurance não são executados contra a in
 
 Esses cenários devem ser executados somente em ambientes autorizados e controlados.
 
+## Integração entre microsserviços
+
+O projeto inclui um laboratório de integração para validar comunicação entre serviços, persistência, contratos e rastreabilidade distribuída.
+
+Karate / JUnit
+      |
+      | REST + X-Correlation-ID
+      v
+Booking Service
+      |
+      +------> PostgreSQL
+      |
+      +------> Payment Service
+
+O Booking Service persiste a reserva no PostgreSQL e realiza uma chamada HTTP ao Payment Service. Quando o pagamento é aprovado, a reserva assume o status CONFIRMED.
+
+O mesmo X-Correlation-ID é propagado entre os serviços e registrado nos logs, permitindo rastrear a requisição durante todo o fluxo.
+
+Também foi validado o cenário de indisponibilidade do serviço de pagamento. Nesse caso, a reserva permanece persistida com status controlado PAYMENT_FAILED.
+
+Os testes Karate validam contrato, persistência, integração Booking -> Payment, status de negócio e propagação do X-Correlation-ID.
+
+Execução do ambiente:
+
+    docker compose -f infrastructure/docker-compose.yml up -d --build
+    mvn test -Dtest=MicroservicesRunner
+    docker compose -f infrastructure/docker-compose.yml down -v
+
 ## Quality Gate
 
 O GitHub Actions executa diferentes níveis de validação conforme o contexto.
