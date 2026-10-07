@@ -1,8 +1,8 @@
 # Karate API Quality Engineering
 
-Projeto prático de Quality Engineering focado em automação de APIs REST com Karate Framework, Java, Maven, BDD, testes de contrato, testes não funcionais com k6 e Quality Gate no GitHub Actions.
+Projeto prático de **Quality Engineering para APIs REST**, utilizando Karate Framework, Java, Maven, JUnit 5, k6 e GitHub Actions.
 
-O objetivo não é apenas demonstrar execução de testes automatizados, mas aplicar uma estratégia de qualidade com diferentes tipos de validação, reutilização, critérios objetivos e integração contínua.
+O objetivo não é apenas automatizar endpoints, mas demonstrar decisões de engenharia relacionadas a **risco, independência dos testes, reutilização, contratos, dados de teste, performance e Quality Gates no CI/CD**.
 
 ## Stack
 
@@ -18,18 +18,18 @@ O objetivo não é apenas demonstrar execução de testes automatizados, mas apl
 
 ## Estratégia de testes
 
-A suíte foi organizada para cobrir diferentes riscos da API:
-
 | Tipo | Objetivo |
 |---|---|
-| Health Check | Verificar disponibilidade básica |
+| Health Check | Verificar disponibilidade básica da API |
 | Autenticação | Validar geração de token |
-| Funcional | Validar criação e regras da reserva |
-| CRUD | Validar fluxo Create, Read, Update e Delete |
-| Contrato | Validar estrutura e tipos do payload |
-| Negativo | Validar erros e operações não autorizadas |
-| Data-Driven | Validar diferentes massas sem duplicação |
-| Performance Smoke | Validar disponibilidade, erros e latência |
+| Funcional | Validar criação e comportamento das reservas |
+| CRUD | Validar Create, Read, Update e Delete |
+| Contrato | Validar estrutura e tipos das respostas |
+| Negativo | Validar recursos inexistentes e operações não autorizadas |
+| Data-driven | Executar o mesmo comportamento com diferentes massas |
+| Smoke | Fornecer feedback rápido sobre fluxos críticos |
+| Regressão | Validar cenários relevantes antes da integração |
+| Performance Smoke | Validar taxa de erro e tempo de resposta |
 
 ## Estrutura
 
@@ -38,6 +38,9 @@ karate-api-quality-engineering/
 ├── .github/
 │   └── workflows/
 │       └── quality-gate.yml
+├── docs/
+│   ├── architecture.md
+│   └── test-strategy.md
 ├── performance/
 │   └── k6/
 │       ├── smoke.js
@@ -46,7 +49,11 @@ karate-api-quality-engineering/
 │   └── test/
 │       ├── java/
 │       │   └── runners/
+│       │       ├── RegressionRunner.java
+│       │       └── SmokeRunner.java
 │       └── resources/
+│           ├── data/
+│           │   └── booking-payload.json
 │           ├── features/
 │           │   ├── auth/
 │           │   ├── booking/
@@ -56,101 +63,234 @@ karate-api-quality-engineering/
 │           │   ├── health/
 │           │   └── negative/
 │           ├── schemas/
+│           │   └── booking-schema.json
 │           └── karate-config.js
 ├── pom.xml
 └── README.md
-Execução
-Pré-requisitos
+```
+
+## Decisões de arquitetura
+
+A suíte foi estruturada para evitar dependências desnecessárias entre testes.
+
+Sempre que possível, os cenários:
+
+- criam os próprios dados;
+- capturam IDs dinamicamente;
+- evitam registros previamente existentes;
+- reutilizam payloads e schemas;
+- compartilham autenticação de forma controlada.
+
+Um payload base de reserva está externalizado em:
+
+```text
+src/test/resources/data/booking-payload.json
+```
+
+Os cenários alteram somente os campos necessários para seu contexto.
+
+Isso reduz duplicação sem introduzir abstrações desnecessárias ao Karate.
+
+## Fluxo CRUD
+
+O cenário CRUD representa uma jornada integrada:
+
+```text
+CREATE
+  ↓
+READ
+  ↓
+UPDATE
+  ↓
+READ AFTER UPDATE
+  ↓
+DELETE
+  ↓
+CONFIRM 404
+```
+
+O `bookingId` é capturado dinamicamente durante a execução.
+
+Assim, o teste não depende de um registro previamente existente no ambiente.
+
+## Autenticação e configuração
+
+A obtenção do token foi isolada em uma feature reutilizável:
+
+```gherkin
+* def auth = callonce read('classpath:features/common/get-token.feature')
+* def token = auth.token
+```
+
+O `karate-config.js` centraliza configurações utilizadas pela suíte.
+
+A URL base e as credenciais podem ser fornecidas por propriedades ou variáveis de ambiente, permitindo alterar o contexto de execução sem modificar os cenários.
+
+## Testes de contrato
+
+Os contratos são externalizados em schemas reutilizáveis.
+
+Exemplo:
+
+```gherkin
+* def bookingSchema = read('classpath:schemas/booking-schema.json')
+And match response == bookingSchema
+```
+
+Essa abordagem permite identificar alterações estruturais ou de tipos que possam impactar consumidores da API.
+
+## Execução
+
+### Pré-requisitos
+
 - Java 21
 - Maven
 - k6
-Executar testes Karate
+
+### Suíte completa
+
+```bash
 mvn clean test
-Executar apenas o smoke
-mvn -Dtest=SmokeRunner test
+```
 
-Executar teste de contrato
-mvn -Dtest=ContractTest test
+### Smoke
 
-Executar cenários negativos
-mvn -Dtest=NegativeTest test
+```bash
+mvn test -Dtest=SmokeRunner
+```
 
-Performance com k6
-Smoke:
+### Regressão
+
+```bash
+mvn test -Dtest=RegressionRunner
+```
+
+### Contrato
+
+```bash
+mvn test -Dtest=ContractTest
+```
+
+### Cenários negativos
+
+```bash
+mvn test -Dtest=NegativeTest
+```
+
+## Performance com k6
+
+### Smoke
+
+```bash
 k6 run performance/k6/smoke.js
+```
 
-Carga controlada:
+### Carga controlada
+
+```bash
 k6 run performance/k6/load.js
+```
 
-O smoke utiliza thresholds objetivos:
-http_req_failed: ['rate<0.01'],
-http_req_duration: ['p(95)<1000']
+Os testes utilizam thresholds objetivos para avaliar comportamento não funcional.
 
-Em uma execução local durante o desenvolvimento:
-http_req_failed = 0.00%
-p(95) = 191.82 ms
-checks = 100%
+Testes agressivos de stress, spike ou endurance não são executados contra a infraestrutura pública utilizada pelo laboratório.
 
-Os resultados representam uma execução específica e podem variar conforme rede, ambiente e disponibilidade da API.
-Testes de contrato
-Os contratos são externalizados em arquivos reutilizáveis.
-Exemplo:
-* def bookingSchema = read('classpath:schemas/booking-schema.json')
-And match response == bookingSchema
+Esses cenários devem ser executados somente em ambientes autorizados e controlados.
 
-Isso permite identificar alterações estruturais ou de tipos que podem impactar consumidores da API.
-Reutilização
-A autenticação foi isolada em uma feature reutilizável:
-* def auth = callonce read('classpath:features/common/get-token.feature')
-* def token = auth.token
+## Quality Gate
 
-O token pode então ser utilizado nas operações protegidas.
-CI/CD
-O GitHub Actions executa um Quality Gate composto por:
-Quality Gate
-│
-├── Karate API Tests
-│
-└── k6 Performance Smoke
+O GitHub Actions executa diferentes níveis de validação conforme o contexto.
 
-Falhas funcionais ou violações dos thresholds de performance provocam falha no respectivo job.
-Os relatórios do Karate são publicados como artifacts para auxiliar análise e investigação.
-Troubleshooting real do pipeline
-Durante a primeira execução no GitHub Actions, os testes Karate passaram, porém o job de performance falhou com:
+### Pull Request
+
+```text
+Pull Request
+    |
+Karate Regression Gate
+```
+
+O objetivo é fornecer feedback direcionado antes da integração das alterações.
+
+### Push na main
+
+```text
+Push main
+    |
+    ├── Karate Regression Gate
+    ├── Karate Full API Suite
+    └── k6 Performance Smoke
+```
+
+Uma alteração somente é considerada aprovada quando os jobs obrigatórios são concluídos sem falhas.
+
+Os relatórios Karate são publicados como artefatos para auxiliar investigação e diagnóstico.
+
+## Troubleshooting real do pipeline
+
+Durante a evolução do projeto, uma execução do GitHub Actions apresentou:
+
+```text
 Error: spawn k6 ENOENT
+```
 
-A análise mostrou que o problema não estava no teste nem na API. O runner não possuía o executável do k6 disponível.
-A configuração do pipeline foi corrigida para instalar o k6 antes da execução.
-Após a correção:
-Karate API Tests       PASS
-k6 Performance Smoke   PASS
-Quality Gate           PASS
+Os testes Karate haviam passado.
 
-Esse caso demonstra a importância de diferenciar falhas da aplicação, automação e infraestrutura de execução.
-Performance e uso responsável
-A API utilizada é pública.
-Por esse motivo, os testes executados contra o ambiente público utilizam carga reduzida.
-Testes agressivos de stress, spike ou endurance devem ser executados somente em ambientes controlados e autorizados.
-Princípios aplicados
-- testes orientados a risco;
-- reutilização sem dependência desnecessária;
-- validação funcional e de contrato;
+A investigação mostrou que a falha não estava na aplicação nem na automação funcional: o runner não possuía o executável do k6 disponível.
+
+O pipeline foi corrigido para instalar o k6 antes da execução.
+
+Esse caso demonstra a importância de classificar corretamente falhas entre:
+
+- aplicação;
+- automação;
+- dados;
+- ambiente;
+- dependências;
+- infraestrutura de CI/CD.
+
+Retry não deve ser utilizado como primeira resposta para mascarar instabilidade. A causa raiz deve ser investigada.
+
+## Banco de dados
+
+A Restful Booker é uma API pública e não disponibiliza acesso à camada de persistência.
+
+Adicionar um banco local sem relação com o sistema testado criaria uma validação artificial e aumentaria a complexidade sem elevar a cobertura real.
+
+Por isso, este laboratório valida as interfaces efetivamente disponibilizadas pelo sistema.
+
+## Princípios aplicados
+
+- priorização baseada em risco;
+- independência dos testes;
+- criação e controle da própria massa;
+- redução de IDs fixos;
+- reutilização sem abstração excessiva;
+- validações funcionais e de contrato;
 - cenários positivos e negativos;
-- massa orientada a dados;
-- BDD;
-- thresholds objetivos;
-- feedback automatizado no CI/CD;
+- testes data-driven;
+- separação entre funcional e performance;
+- Quality Gates no CI/CD;
 - evidências para investigação;
 - prevenção de falsos positivos;
+- investigação de causa raiz;
 - uso responsável de testes não funcionais.
-Evoluções possíveis
+
+## Documentação
+
+A estratégia e as decisões arquiteturais estão detalhadas em:
+
+- `docs/test-strategy.md`
+- `docs/architecture.md`
+
+## Evoluções possíveis
+
 - mocks para dependências externas;
-- execução paralela com isolamento de massa;
-- novos contratos;
-- autenticação parametrizada por ambiente;
+- paralelismo com isolamento de massa;
+- ampliação dos contratos;
 - relatórios consolidados;
 - observabilidade e correlation IDs;
 - execução programada de regressão.
-Observação
-O projeto utiliza a Restful Booker como sistema público para fins de estudo e demonstração.
-Por se tratar de uma API externa, validações internas de banco de dados não foram adicionadas artificialmente ao projeto. Testes de persistência devem ser implementados quando houver acesso legítimo à camada de dados e quando fizerem sentido para a arquitetura avaliada.
+
+## Sistema utilizado
+
+O projeto utiliza a **Restful Booker API** como sistema público para estudo e demonstração de práticas de Quality Engineering.
