@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: booking-service
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5435/bookingdb}
+    username: ${DB_USERNAME:qa_user}
+    password: ${DB_PASSWORD:qa_password}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+  endpoint:
+    health:
+      show-details: always
+
+services:
+  payment:
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8082}

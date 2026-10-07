@@ -10,6 +10,10 @@ function fn() {
         java.lang.System.getenv('BASE_URL') ||
         defaultBaseUrl;
 
+    var bookingServiceUrl = karate.properties['bookingServiceUrl'] || java.lang.System.getenv('BOOKING_SERVICE_URL') || 'http://localhost:8081';
+
+    var paymentServiceUrl = karate.properties['paymentServiceUrl'] || java.lang.System.getenv('PAYMENT_SERVICE_URL') || 'http://localhost:8082';
+
     var authUsername =
         karate.properties['authUsername'] ||
         java.lang.System.getenv('AUTH_USERNAME') ||
@@ -23,6 +27,8 @@ function fn() {
     var config = {
         env: env,
         baseUrl: baseUrl,
+        bookingServiceUrl: bookingServiceUrl,
+        paymentServiceUrl: paymentServiceUrl,
         authUsername: authUsername,
         authPassword: authPassword
     };

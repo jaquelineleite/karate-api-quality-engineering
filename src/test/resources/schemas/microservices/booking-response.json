@@ -1,0 +1,8 @@
+{
+  "id": "#number",
+  "customerName": "#string",
+  "totalPrice": "#number",
+  "status": "#string",
+  "correlationId": "#string",
+  "createdAt": "##string"
+}
