@@ -5,15 +5,9 @@ Feature: Integração entre Booking Service e Payment Service
     * url bookingServiceUrl
     * def bookingSchema = read('classpath:schemas/microservices/booking-response.json')
     * def correlationId = 'karate-' + java.util.UUID.randomUUID()
-    * def requestPayload =
-    """
-    {
-      "customerName": "Karate Integration",
-      "totalPrice": 850.00
-    }
-    """
+    * def requestPayload = ({ customerName: cliente, totalPrice: Number(valor) })
 
-  Scenario: Confirmar reserva após pagamento aprovado
+  Scenario Outline: Confirmar reserva após pagamento aprovado
 
     Given path 'bookings'
     And header Content-Type = 'application/json'
@@ -25,8 +19,8 @@ Feature: Integração entre Booking Service e Payment Service
 
     And match header X-Correlation-ID == correlationId
     And match response.id == '#number'
-    And match response.customerName == 'Karate Integration'
-    And match response.totalPrice == 850.00
+    And match response.customerName == '<cliente>'
+    And match response.totalPrice == <valor>
     And match response.status == 'CONFIRMED'
     And match response.correlationId == correlationId
 
@@ -43,3 +37,9 @@ Feature: Integração entre Booking Service e Payment Service
     And match response.status == 'CONFIRMED'
     And match response.correlationId == correlationId
     And match response.createdAt == '#string'
+
+    Examples:
+      | cliente             | valor |
+      | Karate Paralelo 01  | 850   |
+      | Karate Paralelo 02  | 950   |
+      | Karate Paralelo 03  | 1050  |
