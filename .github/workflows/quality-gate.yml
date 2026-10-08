@@ -112,8 +112,8 @@ jobs:
           done
           exit 1
 
-      - name: Executar testes de integração
-        run: mvn test -Dtest=MicroservicesRunner
+      - name: Executar testes funcionais e paralelos de integração
+        run: mvn test -Dtest=MicroservicesRunner,MicroservicesParallelRunner
 
       - name: Publicar relatório de integração
         if: always()
