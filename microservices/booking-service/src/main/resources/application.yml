@@ -28,6 +28,11 @@ management:
     health:
       show-details: always
 
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
 services:
   payment:
     url: ${PAYMENT_SERVICE_URL:http://localhost:8082}
