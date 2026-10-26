@@ -91,6 +91,77 @@ A estratégia adotada inclui:
 
 Essa abordagem reduz falhas causadas por massa inexistente, alterada ou compartilhada entre execuções.
 
+## Estratégia de paralelismo e isolamento de dados
+
+### Risco tratado
+
+A execução concorrente pode apresentar interferência quando cenários
+compartilham registros, identificadores ou estado mutável.
+
+O objetivo é validar a independência de três cenários de integração entre
+Booking Service e Payment Service.
+
+### Implementação
+
+A feature `features/microservices/integration/booking-payment.feature`
+utiliza um `Scenario Outline` com três exemplos de clientes e valores distintos.
+
+Cada cenário:
+
+- gera um `X-Correlation-ID` com UUID;
+- cria sua própria reserva;
+- captura o identificador retornado pela API;
+- consulta a reserva utilizando esse identificador;
+- valida contrato, dados, correlação e status `CONFIRMED`.
+
+O `MicroservicesParallelRunner` seleciona a tag `@microservices`,
+executa com `.parallel(3)` e verifica:
+
+- exatamente três cenários executados;
+- zero falhas reportadas pelo Karate.
+
+O `MicroservicesRunner` mantém a execução funcional independente.
+
+### Investigação realizada
+
+Durante a implementação, a API retornou HTTP 400 devido à construção
+incorreta do payload parametrizado.
+
+A correção utilizou uma expressão JavaScript para construir o objeto
+e `Number(valor)` para garantir que o preço fosse enviado como número.
+
+A validação posterior confirmou HTTP 201 na criação e HTTP 200 na consulta.
+
+### Resultado esperado e obtido
+
+| Critério | Esperado | Obtido |
+|---|---|---|
+| Quantidade | Três cenários Karate | Três cenários validados |
+| Concorrência | Execuções sobrepostas | Confirmadas na timeline local do Karate |
+| Dados | Reservas e correlações independentes | Confirmados na execução local |
+| Integração | HTTP 201 e HTTP 200 | Confirmados |
+| CI/CD | Ambos os runners executados | Confirmados no GitHub Actions |
+| Falhas | Zero | Zero |
+
+Na execução do CI/CD, o Maven reportou quatro testes JUnit:
+um do runner paralelo e três do runner funcional.
+
+O teste JUnit do runner paralelo executa internamente três cenários Karate.
+Portanto, o total JUnit não deve ser confundido com a quantidade de cenários
+executados pelo Karate.
+
+Evidência do pipeline:
+
+https://github.com/jaquelineleite/karate-api-quality-engineering/actions/runs/37800573140
+
+### Limitações
+
+A execução com três threads avalia independência funcional em concorrência
+controlada. Não substitui testes de carga, stress ou capacidade.
+
+A validação do status `CONFIRMED` não comprova isoladamente o comportamento
+interno do Payment Service.
+
 ## Autenticação e configuração
 
 Dados de configuração são centralizados no `karate-config.js`.
@@ -125,7 +196,12 @@ Após um push na branch principal são executados:
 
 1. `Karate Regression Gate`;
 2. `Karate Full API Suite`;
-3. `k6 Performance Smoke`.
+3. `k6 Performance Smoke`;
+4. `Microservices Integration Gate`.
+
+O job de integração executa os runners `MicroservicesRunner` e
+`MicroservicesParallelRunner`, validando os cenários funcionais e paralelos
+contra os microserviços locais.
 
 O pipeline somente deve ser considerado aprovado quando os jobs obrigatórios forem concluídos sem falhas.
 
