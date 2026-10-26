@@ -2,8 +2,7 @@ package br.com.jaqueline.payment.controller;
 
 import br.com.jaqueline.payment.domain.PaymentRequest;
 import br.com.jaqueline.payment.domain.PaymentResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import br.com.jaqueline.payment.service.PaymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,13 +12,18 @@ import java.util.UUID;
 @RequestMapping("/payments")
 public class PaymentController {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(PaymentController.class);
+    private final PaymentService paymentService;
+
+    public PaymentController(PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
 
     @PostMapping
     public ResponseEntity<PaymentResponse> create(
             @RequestHeader(value = "X-Correlation-ID", required = false)
             String correlationId,
+            @RequestHeader(value = "X-Idempotency-Key", required = false)
+            String idempotencyKey,
             @RequestBody PaymentRequest request) {
 
         String effectiveCorrelationId =
@@ -27,27 +31,10 @@ public class PaymentController {
                         ? UUID.randomUUID().toString()
                         : correlationId;
 
-        String paymentId = UUID.randomUUID().toString();
-
-        log.info(
-                "Processing payment paymentId={} bookingId={} correlationId={}",
-                paymentId,
-                request.bookingId(),
-                effectiveCorrelationId
-        );
-
-        PaymentResponse response = new PaymentResponse(
-                paymentId,
-                request.bookingId(),
-                "APPROVED",
-                effectiveCorrelationId
-        );
-
-        log.info(
-                "Payment approved paymentId={} bookingId={} correlationId={}",
-                paymentId,
-                request.bookingId(),
-                effectiveCorrelationId
+        PaymentResponse response = paymentService.process(
+                idempotencyKey,
+                effectiveCorrelationId,
+                request
         );
 
         return ResponseEntity.ok()

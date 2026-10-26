@@ -11,7 +11,7 @@ public class MicroservicesParallelRunner {
     @Test
     void executarCenariosEmParalelo() {
         Results results = Runner.path("classpath:features/microservices")
-                .tags("@microservices")
+                .tags("@integration")
                 .parallel(3);
 
         assertEquals(3, results.getScenariosTotal(),

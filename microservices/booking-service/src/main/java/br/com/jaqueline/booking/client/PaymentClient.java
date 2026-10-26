@@ -31,6 +31,7 @@ public class PaymentClient {
         return restClient.post()
                 .uri("/payments")
                 .header("X-Correlation-ID", correlationId)
+                .header("X-Idempotency-Key", "booking-" + bookingId)
                 .body(request)
                 .retrieve()
                 .body(PaymentResponse.class);
