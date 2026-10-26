@@ -49,6 +49,36 @@ jobs:
           java-version: '21'
           cache: maven
 
+      - name: Build Booking Service
+        run: mvn -f microservices/booking-service/pom.xml clean package -DskipTests
+
+      - name: Build Payment Service
+        run: mvn -f microservices/payment-service/pom.xml clean package -DskipTests
+
+      - name: Build PIX Service
+        run: mvn -f microservices/pix-service/pom.xml clean package -DskipTests
+
+      - name: Subir ambiente para suíte completa
+        run: docker compose -f infrastructure/docker-compose.yml up -d --build postgres payment-service pix-service booking-service
+
+      - name: Aguardar serviços necessários
+        run: |
+          for endpoint in http://localhost:8081/actuator/health http://localhost:8082/actuator/health http://localhost:8083/actuator/health; do
+            healthy=false
+            for i in {1..30}; do
+              if curl -fsS "$endpoint"; then
+                healthy=true
+                break
+              fi
+              sleep 2
+            done
+            if [ "$healthy" != "true" ]; then
+              echo "Servico nao ficou saudavel: $endpoint"
+              docker compose -f infrastructure/docker-compose.yml logs
+              exit 1
+            fi
+          done
+
       - name: Executar suíte completa Karate
         run: mvn clean test
 
@@ -58,6 +88,14 @@ jobs:
         with:
           name: karate-full-report
           path: target/karate-reports/
+
+      - name: Exibir logs em caso de falha
+        if: failure()
+        run: docker compose -f infrastructure/docker-compose.yml logs
+
+      - name: Encerrar ambiente
+        if: always()
+        run: docker compose -f infrastructure/docker-compose.yml down -v
 
   performance-smoke:
     name: k6 Performance Smoke
@@ -99,6 +137,9 @@ jobs:
       - name: Build Payment Service
         run: mvn -f microservices/payment-service/pom.xml clean package -DskipTests
 
+      - name: Build PIX Service
+        run: mvn -f microservices/pix-service/pom.xml clean package -DskipTests
+
       - name: Subir ambiente de microsserviços
         run: docker compose -f infrastructure/docker-compose.yml up -d --build
 
@@ -112,8 +153,20 @@ jobs:
           done
           exit 1
 
+      - name: Aguardar PIX Service
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8083/actuator/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "PIX Service nao ficou saudavel dentro do tempo limite."
+          docker compose -f infrastructure/docker-compose.yml logs pix-service
+          exit 1
+
       - name: Executar testes funcionais e paralelos de integração
-        run: mvn test -Dtest=MicroservicesRunner,MicroservicesParallelRunner
+        run: mvn test -Dtest=MicroservicesRunner,MicroservicesParallelRunner,PixConcurrencyTest
 
       - name: Publicar relatório de integração
         if: always()
