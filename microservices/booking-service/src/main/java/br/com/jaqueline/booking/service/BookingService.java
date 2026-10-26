@@ -25,7 +25,7 @@ public class BookingService {
         this.paymentClient = paymentClient;
     }
 
-    public Booking create(Booking booking) {
+    public Booking create(Booking booking, Long testDelayMs) {
 
         booking.setStatus("PENDING");
         Booking created = repository.save(booking);
@@ -42,7 +42,8 @@ public class BookingService {
                     paymentClient.processPayment(
                             created.getId(),
                             created.getTotalPrice(),
-                            created.getCorrelationId()
+                            created.getCorrelationId(),
+                            testDelayMs
                     );
 
             log.info(
@@ -95,7 +96,8 @@ public class BookingService {
                     paymentClient.processPayment(
                             booking.getId(),
                             booking.getTotalPrice(),
-                            booking.getCorrelationId()
+                            booking.getCorrelationId(),
+                            null
                     );
 
             if ("APPROVED".equals(payment.status())) {

@@ -27,6 +27,8 @@ public class BookingController {
     public ResponseEntity<Booking> create(
             @RequestHeader(value = "X-Correlation-ID", required = false)
             String correlationId,
+            @RequestHeader(value = "X-Test-Delay-Ms", required = false)
+            Long testDelayMs,
             @RequestBody Booking booking) {
 
         String effectiveCorrelationId =
@@ -42,7 +44,7 @@ public class BookingController {
                 booking.getCustomerName()
         );
 
-        Booking created = bookingService.create(booking);
+        Booking created = bookingService.create(booking, testDelayMs);
 
         log.info(
                 "Booking created bookingId={} correlationId={} status={}",

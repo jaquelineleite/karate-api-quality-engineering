@@ -1,26 +1,25 @@
 package br.com.jaqueline.booking.client;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
-
-import java.time.Duration;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 
 @Component
 public class PaymentClient {
 
     private final RestClient restClient;
-    private final long testDelayMs;
+    private final boolean testDelayEnabled;
 
     public PaymentClient(
             RestClient.Builder builder,
             @Value("${services.payment.url}") String paymentServiceUrl,
-            @Value("${payment.test.delay.ms:0}") long testDelayMs) {
+            @Value("${payment.test.delay.enabled:false}") boolean testDelayEnabled) {
 
-        this.testDelayMs = testDelayMs;
+        this.testDelayEnabled = testDelayEnabled;
 
         SimpleClientHttpRequestFactory requestFactory =
                 new SimpleClientHttpRequestFactory();
@@ -37,18 +36,22 @@ public class PaymentClient {
     public PaymentResponse processPayment(
             Long bookingId,
             BigDecimal amount,
-            String correlationId) {
+            String correlationId,
+            Long testDelayMs) {
 
-        PaymentRequest request =
-                new PaymentRequest(bookingId, amount);
+        PaymentRequest request = new PaymentRequest(bookingId, amount);
 
         return restClient.post()
                 .uri("/payments")
                 .header("X-Correlation-ID", correlationId)
                 .header("X-Idempotency-Key", "booking-" + bookingId)
                 .headers(headers -> {
-                    if (testDelayMs > 0) {
-                        headers.set("X-Test-Delay-Ms", String.valueOf(testDelayMs));
+                    if (testDelayEnabled && testDelayMs != null
+                            && testDelayMs > 0) {
+                        headers.set(
+                                "X-Test-Delay-Ms",
+                                String.valueOf(Math.min(testDelayMs, 10000L))
+                        );
                     }
                 })
                 .body(request)

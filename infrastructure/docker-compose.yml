@@ -40,7 +40,7 @@ services:
       DB_USERNAME: qa_user
       DB_PASSWORD: qa_password
       PAYMENT_SERVICE_URL: http://payment-service:8082
-      PAYMENT_TEST_DELAY_MS: "0"
+      PAYMENT_TEST_DELAY_ENABLED: "true"
     ports:
       - "8081:8081"
     depends_on:
