@@ -23,6 +23,12 @@ services:
     container_name: karate-qe-payment
     environment:
       TESTING_DELAY_ENABLED: "true"
+      DB_URL: jdbc:postgresql://postgres:5432/bookingdb
+      DB_USERNAME: qa_user
+      DB_PASSWORD: qa_password
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8082:8082"
     healthcheck:

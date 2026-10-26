@@ -2,6 +2,17 @@ spring:
   application:
     name: payment-service
 
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5435/bookingdb}
+    username: ${DB_USERNAME:qa_user}
+    password: ${DB_PASSWORD:qa_password}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
 server:
   port: 8082
 
