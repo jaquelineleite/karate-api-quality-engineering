@@ -68,10 +68,52 @@ public class BookingService {
                     exception.getMessage()
             );
 
-            created.setStatus("PAYMENT_FAILED");
+            created.setStatus("PAYMENT_UNKNOWN");
         }
 
         return repository.save(created);
+    }
+
+
+    public Optional<Booking> retryPayment(Long bookingId) {
+        Optional<Booking> found = repository.findById(bookingId);
+
+        if (found.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Booking booking = found.get();
+
+        if (!"PAYMENT_UNKNOWN".equals(booking.getStatus())) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.CONFLICT,
+                    "Only PAYMENT_UNKNOWN bookings can be retried");
+        }
+
+        try {
+            PaymentClient.PaymentResponse payment =
+                    paymentClient.processPayment(
+                            booking.getId(),
+                            booking.getTotalPrice(),
+                            booking.getCorrelationId()
+                    );
+
+            if ("APPROVED".equals(payment.status())) {
+                booking.setStatus("CONFIRMED");
+            } else {
+                booking.setStatus("PAYMENT_FAILED");
+            }
+
+        } catch (org.springframework.web.client.RestClientException exception) {
+            log.warn(
+                    "Payment retry inconclusive bookingId={} error={}",
+                    bookingId,
+                    exception.getMessage()
+            );
+            booking.setStatus("PAYMENT_UNKNOWN");
+        }
+
+        return Optional.of(repository.save(booking));
     }
 
     public Optional<Booking> findById(Long id) {

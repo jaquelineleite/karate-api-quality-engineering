@@ -57,6 +57,14 @@ public class BookingController {
                 .body(created);
     }
 
+
+    @PostMapping("/{id}/retry-payment")
+    public ResponseEntity<Booking> retryPayment(@PathVariable Long id) {
+        return bookingService.retryPayment(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Booking> findById(
             @PathVariable Long id,

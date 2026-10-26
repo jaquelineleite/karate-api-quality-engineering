@@ -21,6 +21,8 @@ services:
     build:
       context: ../microservices/payment-service
     container_name: karate-qe-payment
+    environment:
+      TESTING_DELAY_ENABLED: "true"
     ports:
       - "8082:8082"
     healthcheck:
@@ -38,6 +40,7 @@ services:
       DB_USERNAME: qa_user
       DB_PASSWORD: qa_password
       PAYMENT_SERVICE_URL: http://payment-service:8082
+      PAYMENT_TEST_DELAY_MS: "0"
     ports:
       - "8081:8081"
     depends_on:
