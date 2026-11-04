@@ -102,6 +102,23 @@ Uma alteração no contrato de pagamento pode afetar:
 5. rastreabilidade distribuída por `X-Correlation-ID`;
 6. testes de integração, contrato e regressão.
 
+
+## Ferramentas de modelagem e contexto profissional
+
+Os diagramas desta documentação estão escritos em **Mermaid** para renderização e revisão diretamente no GitHub. Eles também podem ser reproduzidos em uma ferramenta CASE, como **Sparx Enterprise Architect**, utilizando notações UML apropriadas.
+
+**Experiência relacionada da autora:** utilização profissional do Enterprise Architect na ACT Digital, em contexto de sistemas bancários (Sicoob). Esta referência contextualiza a familiaridade com a ferramenta; **não significa que o código deste laboratório foi modelado originalmente no Enterprise Architect**, nem especifica atividades de autoria/edição de diagramas ainda não detalhadas.
+
+### Correspondência entre artefatos
+
+| Artefato neste repositório | Equivalente de modelagem no Enterprise Architect | Objetivo |
+|---|---|---|
+| Diagrama de sequência | UML Sequence Diagram | Mensagens entre serviços e tratamento de falhas |
+| Diagrama de classes conceitual | UML Class Diagram | Entidades, atributos, operações e relacionamentos |
+| Visão funcional em fluxograma | Pode orientar a construção de Use Case Diagram, com atores e fronteira definidos | Capacidades e objetivos de negócio |
+
+A transposição para UML formal deve preservar a semântica da notação; o fluxograma Mermaid não deve ser rotulado como um diagrama de casos de uso UML pronto.
+
 ## Referências internas
 
 - [Arquitetura](../architecture.md)
