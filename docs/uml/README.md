@@ -1,27 +1,18 @@
-# UML e orientação a objetos — laboratório Booking / Payment
+# Modelagem UML — Domínio de Reservas e Pagamentos
 
-> Material de estudo e documentação **conceitual** baseado no laboratório de integração deste repositório. Diagramas são modelos didáticos, não engenharia reversa completa do código. Sem alterar produção, testes ou infraestrutura.
+Documentação de análise de sistemas do laboratório de integração **Booking Service → Payment Service → PostgreSQL**.
 
-## O que é UML?
+## Escopo e premissas
 
-UML (Unified Modeling Language) é uma **linguagem de modelagem**, não um programa. Pode ser desenhada no Miro, diagrams.net/draw.io ou renderizada a partir de texto Mermaid no GitHub. Ferramentas CASE apoiam atividades de modelagem e engenharia de software; usar Miro não comprova, por si só, experiência com uma ferramenta CASE especializada.
+- **Domínio:** criação de reservas, processamento de pagamentos e atualização de status.
+- **Integrações:** comunicação HTTP entre Booking Service e Payment Service.
+- **Persistência:** PostgreSQL.
+- **Rastreabilidade:** propagação de `X-Correlation-ID`.
+- **Comportamento de falha:** indisponibilidade do pagamento preserva a reserva com status `PAYMENT_FAILED`.
 
-## 1. Caso de uso: visão de negócio
+Os diagramas representam o comportamento documentado do laboratório. O modelo de classes é **conceitual**: seus atributos e métodos não devem ser interpretados como nomes de classes Java existentes sem verificação no código.
 
-```mermaid
-flowchart LR
-    C["Cliente / sistema consumidor"]
-    UC1(["Solicitar reserva"])
-    UC2(["Consultar situação da reserva"])
-    UC3(["Processar pagamento"])
-    C --> UC1
-    C --> UC2
-    UC1 -. "envolve" .-> UC3
-```
-
-**Leitura:** mostra capacidades do sistema, não detalhes de implementação. É uma representação didática de casos de uso; o desenho é um fluxograma Mermaid, **não** um diagrama UML formal de casos de uso com notação completa.
-
-## 2. Diagrama de sequência UML: fluxo de reserva
+## 1. Interações entre serviços — diagrama de sequência
 
 ```mermaid
 sequenceDiagram
@@ -30,23 +21,32 @@ sequenceDiagram
     participant Booking as Booking Service
     participant DB as PostgreSQL
     participant Payment as Payment Service
-    Consumidor->>Booking: POST reserva + X-Correlation-ID
+    Consumidor->>Booking: Solicitar reserva (X-Correlation-ID)
     Booking->>DB: Persistir reserva
-    Booking->>Payment: Solicitar pagamento + X-Correlation-ID
+    Booking->>Payment: Processar pagamento (X-Correlation-ID)
     alt pagamento aprovado
-        Payment-->>Booking: Aprovado
+        Payment-->>Booking: Pagamento aprovado
         Booking->>DB: Atualizar status CONFIRMED
-        Booking-->>Consumidor: Reserva confirmada
-    else indisponibilidade/falha
-        Payment--xBooking: Falha/indisponibilidade
+        Booking-->>Consumidor: Resultado da reserva
+    else indisponibilidade do serviço
+        Payment--xBooking: Falha de comunicação
         Booking->>DB: Atualizar status PAYMENT_FAILED
-        Booking-->>Consumidor: Reserva com falha controlada
+        Booking-->>Consumidor: Resultado com falha controlada
     end
 ```
 
-**Perguntas:** quem inicia a chamada? Onde ocorre persistência? O que acontece quando o Payment Service falha? Como rastrear o mesmo pedido entre serviços?
+### Regras de negócio e integridade
 
-## 3. Diagrama de classes UML — modelo conceitual (não classes Java confirmadas)
+| Regra | Comportamento esperado | Evidência de validação |
+|---|---|---|
+| RN-01 | Reserva persistida no fluxo de integração | Consultas/validações do laboratório |
+| RN-02 | Pagamento aprovado resulta em `CONFIRMED` | Cenário de integração Booking/Payment |
+| RN-03 | Indisponibilidade do Payment resulta em `PAYMENT_FAILED` | Cenário de falha controlada |
+| RN-04 | `X-Correlation-ID` é propagado entre serviços | Validação de cabeçalhos e logs |
+
+A correspondência exata com casos de teste e endpoints deve ser conferida antes de declarar rastreabilidade completa.
+
+## 2. Modelo de domínio — diagrama de classes conceitual
 
 ```mermaid
 classDiagram
@@ -71,39 +71,41 @@ classDiagram
     Reserva --> StatusReserva : possui
 ```
 
-**Atenção:** os atributos e métodos acima são **proposta de modelagem didática**, não uma afirmação de que existem com esses nomes no código-fonte. Verifique classes e persistência reais antes de transformar o modelo em documentação de implementação.
+### Decisões de modelagem
 
-## 4. Conceitos rápidos de orientação a objetos
+- **Reserva** concentra o estado do processo de negócio.
+- **Pagamento** representa a interação necessária para confirmar a reserva.
+- **StatusReserva** explicita os estados relevantes para os cenários documentados.
+- A associação entre reserva e pagamento é uma **hipótese conceitual** de análise; cardinalidades, atributos e operações exigem validação contra a implementação antes de se tornarem especificação técnica definitiva.
 
-| Conceito | Explicação | Exemplo didático |
-|---|---|---|
-| Classe | Molde que define dados e comportamentos | `Reserva` |
-| Objeto | Instância concreta de uma classe | Reserva `R-123` |
-| Atributo | Informação mantida pelo objeto | `status` |
-| Método | Operação/comportamento | `confirmar()` |
-| Encapsulamento | Protege estado e expõe operações controladas | Alterar status por método validado |
-| Abstração | Representa apenas o essencial | `Pagamento` sem detalhes do provedor |
-| Herança | Uma classe especializa outra | `PagamentoPix` herda de `Pagamento` (hipotético) |
-| Polimorfismo | Implementações diferentes respondem ao mesmo contrato | `autorizar()` em formas de pagamento distintas (hipotético) |
-| Associação | Relação entre objetos | Reserva se relaciona com Pagamento |
-| Composição | Parte depende do ciclo de vida do todo | Exemplo genérico: Pedido contém ItensPedido |
+## 3. Visão funcional do processo
 
-**Importante:** microserviços, endpoints REST e tabelas não são automaticamente classes. O diagrama de sequência modela interações; o de classes modela estrutura conceitual.
+```mermaid
+flowchart LR
+    C["Sistema consumidor"]
+    R["Solicitar reserva"]
+    P["Processar pagamento"]
+    S["Consultar resultado"]
+    C --> R --> P
+    C --> S
+```
 
-## 5. Exercício para fixar (15 minutos)
+Esta é uma visão funcional em fluxograma, **não** um diagrama UML formal de casos de uso.
 
-1. Explique em voz alta por que a reserva é persistida antes da chamada ao pagamento.
-2. Desenhe no Miro a sequência do cenário `PAYMENT_FAILED`.
-3. Diferencie atributo `status` e método `confirmar()`.
-4. Diga quais elementos do diagrama de classes precisariam ser conferidos no código.
-5. Compare UML (modelagem de software), BPMN (processos de negócio) e Figma (interfaces).
+## 4. Análise de impacto
 
-## Como visualizar
+Uma alteração no contrato de pagamento pode afetar:
+1. comunicação entre os serviços;
+2. tratamento de indisponibilidade;
+3. transição dos estados `CONFIRMED` e `PAYMENT_FAILED`;
+4. persistência e consistência dos dados;
+5. rastreabilidade distribuída por `X-Correlation-ID`;
+6. testes de integração, contrato e regressão.
 
-O GitHub renderiza os blocos Mermaid automaticamente no Markdown. Abra este arquivo no repositório e selecione a visualização renderizada. Não é preciso instalar ferramenta para começar.
+## Referências internas
 
-## Como apresentar no currículo/LinkedIn
+- [Arquitetura](../architecture.md)
+- [Estratégia de testes](../test-strategy.md)
+- [Conceitos de referência](./INTERVIEW-CHEATSHEET.md)
 
-Formulação segura: **"Estudo aplicado de UML e orientação a objetos: documentação conceitual de fluxos de reserva e pagamento com diagramas de sequência e classes, vinculada a laboratório de APIs e microserviços."**
-
-Não declarar experiência profissional com Oracle, UML, CASE ou BPMN sem evidência correspondente.
+Os diagramas Mermaid são renderizados diretamente pelo GitHub. O documento descreve o domínio e a arquitetura do laboratório; não representa certificação UML nem experiência profissional específica com ferramentas CASE.
