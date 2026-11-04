@@ -1,18 +1,42 @@
-# Revisão rápida — análise de sistemas, UML e OO
+# Referência técnica — UML e orientação a objetos
 
-**UML não é Figma:** UML é uma linguagem padronizada de modelagem. Miro e diagrams.net são ferramentas onde podemos desenhá-la. Figma é predominantemente design de interface.
+Material de consulta complementar à documentação de domínio em [Modelagem UML](./README.md).
 
-**Três perguntas comuns:**
-- **Qual a diferença entre caso de uso e sequência?** Caso de uso descreve objetivos e atores; sequência descreve mensagens trocadas ao longo do tempo.
-- **Qual a diferença entre classe e objeto?** Classe é o tipo/molde; objeto é uma instância com valores concretos.
-- **Qual a diferença entre encapsulamento e abstração?** Encapsulamento controla acesso ao estado; abstração destaca o comportamento essencial e oculta detalhes irrelevantes.
+## Notações e finalidades
 
-**Como analisar um requisito:** identificar ator, objetivo, regras de negócio, entradas, saídas, exceções, dependências e critérios de aceite.
+| Notação | Aplicação |
+|---|---|
+| Diagrama de sequência (UML) | Ordem temporal das mensagens entre participantes |
+| Diagrama de classes (UML) | Estrutura estática, atributos, operações e relacionamentos |
+| Diagrama de casos de uso (UML) | Atores, objetivos e fronteira do sistema |
+| BPMN | Modelagem de processos de negócio |
+| Modelo entidade-relacionamento | Estrutura lógica de dados e cardinalidades |
 
-**Exemplo do laboratório:** “Quando o serviço de pagamento estiver indisponível, a reserva deve permanecer persistida com estado controlado PAYMENT_FAILED.” Testar cenário feliz **e** falha; registrar evidências; verificar consistência e rastreabilidade por X-Correlation-ID.
+**UML** é uma linguagem de modelagem, não uma ferramenta. Miro e diagrams.net podem ser usados para desenhar diagramas; ferramentas CASE especializadas apoiam atividades de engenharia de software.
 
-**SQL e modelagem de dados:** distinguir entidade, atributo, chave primária, chave estrangeira e cardinalidade. Não afirmar Oracle: este laboratório usa PostgreSQL.
+## Orientação a objetos — conceitos de referência
 
-**Pergunta de entrevista:** “Você já trabalhou com UML?” Resposta transparente: “Tenho base de orientação a objetos e análise de requisitos. Estruturei um estudo aplicado com diagramas UML de sequência e classes para documentar um laboratório de integração Booking/Payment. Estou consolidando o uso de UML em análise e projeto de sistemas.”
+| Conceito | Definição técnica |
+|---|---|
+| Classe | Definição de atributos e operações de um tipo |
+| Objeto | Instância de uma classe |
+| Encapsulamento | Controle de acesso ao estado e aos comportamentos |
+| Abstração | Representação das características relevantes do domínio |
+| Herança | Especialização de um tipo a partir de outro |
+| Polimorfismo | Diferentes implementações de um mesmo contrato |
+| Associação | Relação estrutural entre elementos |
+| Composição | Relação todo-parte com dependência de ciclo de vida |
 
-**Próximo passo opcional:** conferir código e banco reais e transformar o modelo conceitual em modelo de implementação, sem adicionar diagramas por adicionar.
+### Aplicação ao domínio
+
+No modelo conceitual, `Reserva` é uma entidade de negócio com estado e operações. `confirmar()` é uma operação de domínio **ilustrativa**, não necessariamente um método implementado no serviço. O diagrama de sequência, por sua vez, descreve mensagens **entre serviços**, não relações de herança entre classes.
+
+### Critérios para evolução do modelo
+
+- Conferir os contratos HTTP e as entidades efetivamente implementadas.
+- Distinguir classes de domínio, serviços, DTOs e tabelas.
+- Verificar cardinalidades e transições de estado contra regras de negócio.
+- Relacionar diagramas a cenários de teste apenas quando houver evidência.
+- Evitar introduzir abstrações que não representem uma necessidade real do sistema.
+
+Este arquivo é referência conceitual; a documentação principal do repositório permanece orientada ao produto, arquitetura, requisitos e qualidade.
